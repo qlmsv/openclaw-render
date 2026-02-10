@@ -3,7 +3,9 @@
 > [!IMPORTANT]
 > **View full deployment instructions in the [Render docs](https://render.com/docs/deploy-openclaw).**
 
-This template defines a `render.yaml` file you can use to deploy [OpenClaw](https://github.com/openclaw/openclaw) on Render. It uses the community-maintained [`alpine/openclaw`](https://hub.docker.com/r/alpine/openclaw) Docker image.
+This template defines a `render.yaml` file you can use to deploy [OpenClaw](https://github.com/openclaw/openclaw) on Render. It uses the official project's [container image](https://github.com/openclaw/openclaw/pkgs/container/openclaw).
+
+By default, this template uses the `latest` tag. Override this by setting the `OPENCLAW_VERSION` environment variable to a specific version tag.
 
 ## Setup
 
