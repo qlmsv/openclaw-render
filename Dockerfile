@@ -1,5 +1,5 @@
 # Global ARG for use in FROM instructions
-ARG OPENCLAW_VERSION=2026.2.2
+ARG OPENCLAW_VERSION=latest
 
 # Build Go proxy
 FROM golang:1.22-bookworm AS proxy-builder
@@ -10,7 +10,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /proxy-bin .
 
 
 # Extend pre-built OpenClaw with our auth proxy
-FROM alpine/openclaw:${OPENCLAW_VERSION}
+FROM ghcr.io/openclaw/openclaw:${OPENCLAW_VERSION}
 
 # Base image ends with USER node; switch to root for setup
 USER root
