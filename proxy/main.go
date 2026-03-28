@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cookieName = "openclaw_auth"
+	cookieName   = "openclaw_auth"
 	cookieMaxAge = 30 * 24 * 60 * 60 // 30 days
 )
 
@@ -355,6 +355,42 @@ func isValidAuthCookie(r *http.Request) bool {
 	return hmac.Equal([]byte(cookie.Value), []byte(expected))
 }
 
+func tokenFromAuthorizationHeader(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+	parts := strings.SplitN(trimmed, " ", 2)
+	if len(parts) == 2 && strings.EqualFold(parts[0], "bearer") {
+		return strings.TrimSpace(parts[1])
+	}
+	return trimmed
+}
+
+func requestGatewayToken(r *http.Request) string {
+	for _, key := range []string{"x-openclaw-token", "x-openclaw-auth"} {
+		if value := strings.TrimSpace(r.Header.Get(key)); value != "" {
+			return value
+		}
+	}
+	return tokenFromAuthorizationHeader(r.Header.Get("Authorization"))
+}
+
+func isValidGatewayToken(raw string) bool {
+	if gatewayToken == "" {
+		return false
+	}
+	token := strings.TrimSpace(raw)
+	if token == "" {
+		return false
+	}
+	return hmac.Equal([]byte(token), []byte(gatewayToken))
+}
+
+func isAuthorizedRequest(r *http.Request) bool {
+	return isValidAuthCookie(r) || isValidGatewayToken(requestGatewayToken(r))
+}
+
 func setAuthCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     cookieName,
@@ -630,8 +666,8 @@ func stripProxyHeaders(r *http.Request) {
 }
 
 func handleProxy(w http.ResponseWriter, r *http.Request) {
-	// Check auth cookie (skip for health endpoint, already handled separately)
-	if !isValidAuthCookie(r) {
+	// Allow either the browser auth cookie or a direct gateway token header.
+	if !isAuthorizedRequest(r) {
 		// Show landing page for root, redirect others to root
 		if r.URL.Path == "/" || r.URL.Path == "" {
 			handleLandingPage(w, r, "")
