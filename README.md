@@ -30,5 +30,5 @@ By default, this template uses the `latest` tag. Override this by setting the `O
 Override the OpenClaw version with a build argument:
 
 ```bash
-docker build --build-arg OPENCLAW_VERSION=2026.2.3 -t openclaw-render .
+docker build --build-arg OPENCLAW_VERSION=2026.3.24 -t openclaw-render .
 ```

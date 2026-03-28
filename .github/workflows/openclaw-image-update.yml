@@ -1,0 +1,85 @@
+name: OpenClaw Image Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "13 5 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: openclaw-image-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Resolve latest official OpenClaw release
+        id: version
+        run: |
+          set -euo pipefail
+
+          current="$(sed -n 's/^ARG OPENCLAW_VERSION=//p' Dockerfile | head -n 1)"
+          latest_tag="$(curl -fsSL https://api.github.com/repos/openclaw/openclaw/releases/latest | jq -r '.tag_name')"
+          latest="${latest_tag#v}"
+
+          {
+            echo "current=$current"
+            echo "latest=$latest"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$current" = "$latest" ]; then
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          perl -0pi -e "s/^ARG OPENCLAW_VERSION=.*/ARG OPENCLAW_VERSION=$latest/m" Dockerfile
+          perl -0pi -e "s/OPENCLAW_VERSION=[0-9][0-9A-Za-z.\\-]*/OPENCLAW_VERSION=$latest/g" README.md
+
+          echo "needs_update=true" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke build updated image
+        if: steps.version.outputs.needs_update == 'true'
+        run: |
+          docker build --build-arg OPENCLAW_VERSION="${{ steps.version.outputs.latest }}" -t openclaw-render:smoke .
+
+      - name: Create update PR
+        if: steps.version.outputs.needs_update == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/openclaw-image-update
+          base: main
+          delete-branch: true
+          title: "chore: update OpenClaw image to ${{ steps.version.outputs.latest }}"
+          commit-message: "chore: update OpenClaw image to ${{ steps.version.outputs.latest }}"
+          labels: |
+            automated
+            upstream-sync
+            image-update
+          body: |
+            ## Summary
+
+            Automatic update of the official OpenClaw base image.
+
+            - Current pinned version: `${{ steps.version.outputs.current }}`
+            - New official version: `${{ steps.version.outputs.latest }}`
+
+            ## Safety checks
+
+            - Resolved latest version from `openclaw/openclaw` releases
+            - Built the custom Render wrapper image locally in CI before opening this PR
+
+            ## Deployment policy
+
+            Merge of this PR will deploy via Render auto-deploy.
