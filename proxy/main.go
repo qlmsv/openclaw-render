@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cookieName   = "openclaw_auth"
+	cookieName = "openclaw_auth"
 	cookieMaxAge = 30 * 24 * 60 * 60 // 30 days
 )
 
