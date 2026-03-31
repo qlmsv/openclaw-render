@@ -20,6 +20,7 @@ By default, this template uses the `latest` tag. Override this by setting the `O
 3. Sessions persist across service restarts
 
 **Security:**
+
 - Gateway binds to loopback only (never directly exposed)
 - Constant-time token comparison
 - Rate limiting (5 attempts/minute per IP)
